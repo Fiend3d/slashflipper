@@ -28,3 +28,11 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
     SDL3::SDL3-static
 )
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/app.manifest 
+               ${CMAKE_CURRENT_BINARY_DIR}/app.manifest COPYONLY)
+
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND "mt.exe" -manifest \"${CMAKE_CURRENT_SOURCE_DIR}/app.manifest\" 
+                     -outputresource:"$<TARGET_FILE:slashflipper>";#1
+)
