@@ -39,19 +39,19 @@ private:
 };
 
 HHOOK g_keyboardHook = NULL;
-bool g_winPressed = false;
+bool g_win_pressed = false;
 bool g_enabled = true;
 bool g_reverse = false;
 
 void simulate_button(BYTE bVk, DWORD dWFlag)
 {
     keybd_event(bVk, 0, dWFlag, 0);
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    std::this_thread::sleep_for(std::chrono::milliseconds(30));
 };
 
-void simulate_ctrl_v()
+void simulate_ctrl_v(const char key)
 {
-    simulate_button('V', KEYEVENTF_KEYUP); // v up
+    simulate_button(key, KEYEVENTF_KEYUP); // key up
     simulate_button(VK_LWIN, KEYEVENTF_KEYUP); // win up
     simulate_button(VK_CONTROL, 0); // ctrl down
     simulate_button('V', 0); // v down
@@ -59,8 +59,47 @@ void simulate_ctrl_v()
     simulate_button(VK_LWIN, 0); // win down, so it feels good
 }
 
+void on_shortcut_pressed_snake()
+{
+    // std::cout << "on_shortcut_pressed_snake" << std::endl;
+
+    if (g_enabled)
+    {
+        char* clipboard = SDL_GetClipboardText();
+        std::string text = clipboard;
+        SDL_free(clipboard);
+
+        std::string result;
+        result.reserve(text.size() * 2);
+
+        for (size_t i = 0; i < text.size(); ++i)
+        {
+            char c = text[i];
+            if (std::isupper(c))
+            {
+                if (i > 0)
+                {
+                    result.push_back('_');
+                }
+                result.push_back(static_cast<char>(std::tolower(c)));
+            }
+            else
+            {
+                result.push_back(c);
+            }
+        }
+
+        // std::cout << result << std::endl;
+
+        SDL_SetClipboardText(result.c_str());
+        simulate_ctrl_v('O');
+    }
+}
+
 void on_shortcut_pressed()
 {
+    // std::cout << "on_shortcut_pressed" << std::endl;
+
     if (g_enabled)
     {
         char* clipboard = SDL_GetClipboardText();
@@ -88,10 +127,10 @@ void on_shortcut_pressed()
             }
         }
 
-        std::cout << text << std::endl;
+        // std::cout << text << std::endl;
 
         SDL_SetClipboardText(text.c_str());
-        simulate_ctrl_v();
+        simulate_ctrl_v('V');
     }
 }
 
@@ -106,10 +145,15 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
         {
             // Check for modifier keys
             if (kb->vkCode == VK_LWIN)
-                g_winPressed = true;
+                g_win_pressed = true;
 
             // Check for our hotkey combination
-            else if (kb->vkCode == 'V' && g_winPressed)
+            else if (kb->vkCode == 'O' && g_win_pressed)
+            {
+                on_shortcut_pressed_snake();
+                return 1;
+            }
+            else if (kb->vkCode == 'V' && g_win_pressed)
             {
                 on_shortcut_pressed();
                 return 1;
@@ -118,7 +162,7 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam)
         else if (wParam == WM_KEYUP || wParam == WM_SYSKEYUP)
         {
             if (kb->vkCode == VK_LWIN)
-                g_winPressed = false;
+                g_win_pressed = false;
         }
     }
 
