@@ -42,6 +42,7 @@ HHOOK g_keyboardHook = NULL;
 bool g_win_pressed = false;
 bool g_enabled = true;
 bool g_reverse = false;
+bool g_pascal_case = false;
 
 void simulate_button(BYTE bVk, DWORD dWFlag)
 {
@@ -72,20 +73,43 @@ void on_shortcut_pressed_snake()
         std::string result;
         result.reserve(text.size() * 2);
 
-        for (size_t i = 0; i < text.size(); ++i)
+        if (text.find("_") != std::string::npos) 
         {
-            char c = text[i];
-            if (std::isupper(c))
+            for (size_t i = 0; i < text.size(); ++i)
             {
-                if (i > 0)
+                char c = text[i];
+                if (c == '_')
                 {
-                    result.push_back('_');
+                    c = text[++i];
+                    result.push_back(std::toupper(c));
                 }
-                result.push_back(static_cast<char>(std::tolower(c)));
+                else
+                {
+                    if (g_pascal_case)
+                    {
+                        if (i == 0) c = std::toupper(text[i]);
+                    }
+                    result.push_back(c);
+                }
             }
-            else
+        }
+        else
+        {
+            for (size_t i = 0; i < text.size(); ++i)
             {
-                result.push_back(c);
+                char c = text[i];
+                if (std::isupper(c))
+                {
+                    if (i > 0)
+                    {
+                        result.push_back('_');
+                    }
+                    result.push_back(std::tolower(c));
+                }
+                else
+                {
+                    result.push_back(c);
+                }
             }
         }
 
@@ -186,6 +210,12 @@ void callback_enable(void* userdata, SDL_TrayEntry* invoker)
 {
     g_enabled = SDL_GetTrayEntryChecked(invoker);
     std::cout << "callback_enable " << g_enabled << std::endl;
+}
+
+void callback_pascal_case(void* userdata, SDL_TrayEntry* invoker)
+{
+    g_pascal_case = SDL_GetTrayEntryChecked(invoker);
+    std::cout << "callback_pascal_case " << g_pascal_case << std::endl;
 }
 
 SDL_Surface* LoadIconFromResource(HINSTANCE hInstance, int resourceID)
@@ -289,10 +319,14 @@ int main(int argc, char* argv[])
     SDL_TrayEntry* menu_reverse = SDL_InsertTrayEntryAt(menu, -1, "Reverse", SDL_TRAYENTRY_CHECKBOX);
     SDL_SetTrayEntryChecked(menu_reverse, g_reverse);
 
+    SDL_TrayEntry* menu_pascal_case = SDL_InsertTrayEntryAt(menu, -1, "Pascal Case", SDL_TRAYENTRY_CHECKBOX);
+    SDL_SetTrayEntryChecked(menu_reverse, g_pascal_case);
+
     SDL_TrayEntry* menu_quit = SDL_InsertTrayEntryAt(menu, -1, "Quit", SDL_TRAYENTRY_BUTTON);
 
     SDL_SetTrayEntryCallback(menu_reverse, callback_reverse, NULL);
     SDL_SetTrayEntryCallback(menu_enable, callback_enable, NULL);
+    SDL_SetTrayEntryCallback(menu_pascal_case, callback_pascal_case, NULL);
     SDL_SetTrayEntryCallback(menu_quit, callback_quit, NULL);
 
     while (true)
